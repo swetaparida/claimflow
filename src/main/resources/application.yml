@@ -1,0 +1,132 @@
+spring:
+  application:
+    name: claimflow
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/claimflow}
+    username: ${DB_USERNAME:claimflow}
+    password: ${DB_PASSWORD:claimflow}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 30000
+        request.timeout.ms: 10000
+        linger.ms: 5
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: record
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+claimflow:
+  outbox:
+    enabled: ${OUTBOX_RELAY_ENABLED:true}
+    poll-interval: 500ms
+    batch-size: 100
+    max-attempts: 10
+    send-timeout: 10s
+    retention: 7d
+    cleanup-cron: "0 0 3 * * *"
+  kafka:
+    partitions: 3
+    replication-factor: ${KAFKA_REPLICATION_FACTOR:1}
+  notification:
+    enabled: ${NOTIFICATION_CONSUMER_ENABLED:true}
+    group-id: claimflow-notification
+  # Seeds demo claims on an empty database so the queue and dashboard are not empty.
+  demo-seed:
+    enabled: ${DEMO_SEED_ENABLED:true}
+  # Reference data standing in for the policy administration system.
+  policy:
+    catalog:
+      - policy-number: POL-1001
+        holder-name: Jane Doe
+        product-type: MOTOR
+        status: ACTIVE
+        effective-from: 2024-01-01
+        effective-to: 2030-12-31
+        coverage-limit: 50000.00
+        currency: EUR
+      - policy-number: POL-1002
+        holder-name: John Smith
+        product-type: HOME
+        status: ACTIVE
+        effective-from: 2024-01-01
+        effective-to: 2030-12-31
+        coverage-limit: 250000.00
+        currency: EUR
+      - policy-number: POL-2001
+        holder-name: Alex Brown
+        product-type: TRAVEL
+        status: LAPSED
+        effective-from: 2023-01-01
+        effective-to: 2023-12-31
+        coverage-limit: 10000.00
+        currency: EUR
+      - policy-number: POL-3001
+        holder-name: Maria Garcia
+        product-type: HEALTH
+        status: ACTIVE
+        effective-from: 2024-06-01
+        effective-to: 2030-05-31
+        coverage-limit: 100000.00
+        currency: USD
+
+logging:
+  level:
+    com.insurer.claimflow: INFO
+    org.apache.kafka: WARN
